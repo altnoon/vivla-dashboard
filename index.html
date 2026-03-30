@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIVLA Quiz Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; padding: 0; background: #F1F1E5; }
+    * { box-sizing: border-box; }
+    .vd-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .vd-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .vd-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .vd-card { background: #F8F7F0; padding: 16px; box-shadow: 0 1px 4px rgba(12,36,37,.06), 0 4px 12px rgba(12,36,37,.04); }
+    .vd-card-lg { background: #F8F7F0; padding: 24px; box-shadow: 0 1px 4px rgba(12,36,37,.06), 0 4px 12px rgba(12,36,37,.04); }
+    .vd-label { font-size: 10px; font-weight: 500; letter-spacing: .15em; color: #0C2425; opacity: .4; margin-bottom: 6px; }
+    .vd-number { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 500; color: #0C2425; }
+    .vd-accent { font-size: 11px; color: #E38E41; margin-top: 2px; }
+    .vd-sub { font-size: 11px; color: #4A4A48; opacity: .5; margin-top: 2px; }
+    .vd-delta { font-size: 10px; margin-top: 3px; }
+    .vd-delta.up { color: #1D9E75; }
+    .vd-delta.down { color: #D85A30; }
+    .vd-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 11px; color: #4A4A48; }
+    .vd-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .vd-dot { width: 8px; height: 8px; flex-shrink: 0; }
+    .vd-badge { padding: 3px 10px; font-size: 11px; color: #0C2425; white-space: nowrap; display: inline-block; }
+    .vd-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .vd-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+    .vd-table th, .vd-table td { padding: 12px 16px; text-align: left; }
+    .vd-table th { font-weight: 500; font-size: 10px; letter-spacing: .1em; color: #0C2425; opacity: .35; cursor: pointer; }
+    .vd-table th:hover { opacity: .6; }
+    .vd-table thead tr { border-bottom: 1px solid rgba(12,36,37,.06); }
+    .vd-table tbody tr + tr { border-top: 1px solid rgba(12,36,37,.04); }
+    .vd-table tbody tr { cursor: pointer; transition: background .15s ease; }
+    .vd-table tbody tr:hover { background: rgba(12,36,37,.02); }
+    .vd-header { display: flex; align-items: center; margin-bottom: 14px; }
+    .vd-header .vd-label { margin-bottom: 0; flex: 1; }
+    .vd-info-btn { border: none; background: transparent; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 400; color: #E38E41; padding: 0; transition: opacity .2s ease; outline: none; -webkit-tap-highlight-color: transparent; letter-spacing: .05em; }
+    @media (hover: hover) { .vd-info-btn:hover { opacity: .6; } }
+    .vd-info-btn.active { font-weight: 500; }
+    .vd-info-panel { display: none; background: #F1F1E5; margin: 0 -24px; padding: 16px 24px; border-top: 1px solid rgba(12,36,37,.04); border-bottom: 1px solid rgba(12,36,37,.04); margin-bottom: 14px; }
+    .vd-info-panel.open { display: block; }
+    .vd-info-table { width: 100%; font-size: 11px; border-collapse: collapse; color: #0C2425; }
+    .vd-info-table td { padding: 6px 0; vertical-align: top; }
+    .vd-info-table td:first-child { font-weight: 500; white-space: nowrap; padding-right: 16px; opacity: .6; width: 1%; }
+    .vd-info-table td:last-child { opacity: .75; }
+    .vd-info-table tr + tr td { border-top: 1px solid rgba(12,36,37,.04); }
+    .vd-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 20px; }
+    .vd-filter { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: .05em; padding: 5px 12px; border: 1px solid rgba(12,36,37,.1); background: transparent; color: #0C2425; cursor: pointer; transition: all .15s; outline: none; -webkit-tap-highlight-color: transparent; }
+    .vd-filter.active { background: #0C2425; color: #F8F7F0; border-color: #0C2425; }
+    .vd-filter:not(.active):hover { border-color: rgba(12,36,37,.25); }
+    .vd-score { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; }
+    .vd-score.hot { color: #1D9E75; }
+    .vd-score.warm { color: #E38E41; }
+    .vd-score.cold { color: #888780; }
+    .vd-pipeline { display: flex; gap: 2px; margin-top: 12px; }
+    .vd-pipe-stage { flex: 1; text-align: center; padding: 12px 4px; position: relative; }
+    .vd-pipe-stage-label { font-size: 9px; font-weight: 500; letter-spacing: .1em; color: #0C2425; opacity: .4; margin-bottom: 4px; }
+    .vd-pipe-stage-num { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; color: #0C2425; }
+    .vd-pipe-stage-pct { font-size: 10px; color: #E38E41; margin-top: 2px; }
+    .vd-pipe-bar { height: 4px; margin-top: 8px; }
+    .vd-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12,36,37,.4); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+    .vd-overlay.open { display: flex; }
+    .vd-modal { background: #F8F7F0; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(12,36,37,.15); position: relative; }
+    .vd-modal-close { position: absolute; top: 16px; right: 16px; border: 1.5px solid rgba(12,36,37,.15); background: #F8F7F0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #0C2425; opacity: .7; cursor: pointer; transition: all .2s; padding: 0; line-height: 1; -webkit-tap-highlight-color: transparent; z-index: 1; }
+    .vd-modal-close:hover { opacity: 1; background: #E38E41; color: #F8F7F0; border-color: #E38E41; }
+    .vd-modal-header { padding: 28px 28px 20px; border-bottom: 1px solid rgba(12,36,37,.06); }
+    .vd-modal-body { padding: 20px 28px 28px; }
+    .vd-modal-section { margin-bottom: 20px; }
+    .vd-modal-section:last-child { margin-bottom: 0; }
+    .vd-modal-section-title { font-size: 9px; font-weight: 500; letter-spacing: .2em; color: #0C2425; opacity: .35; margin-bottom: 10px; }
+    .vd-modal-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; color: #0C2425; }
+    .vd-modal-row + .vd-modal-row { border-top: 1px solid rgba(12,36,37,.04); }
+    .vd-modal-row-label { opacity: .5; }
+    .vd-modal-row-value { font-weight: 400; text-align: right; max-width: 60%; }
+    .vd-modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .vd-modal-stat { background: #F1F1E5; padding: 12px; }
+    .vd-modal-stat-label { font-size: 9px; font-weight: 500; letter-spacing: .1em; color: #0C2425; opacity: .35; margin-bottom: 4px; }
+    .vd-modal-stat-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 500; color: #0C2425; }
+    .vd-dest-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .vd-dest-tag { font-size: 11px; padding: 4px 10px; background: #F1F1E5; color: #0C2425; }
+    .vd-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .vd-action-btn { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: .1em; padding: 10px 20px; border: none; cursor: pointer; transition: all .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .vd-action-btn.email { background: #0C2425; color: #F8F7F0; }
+    .vd-action-btn.email:hover { background: #1a3a3b; }
+    .vd-action-btn.wa { background: #25D366; color: #fff; }
+    .vd-action-btn.wa:hover { background: #1ebe57; }
+    .vd-action-btn.call { background: #F8F7F0; color: #0C2425; border: 1px solid rgba(12,36,37,.15); }
+    .vd-action-btn.call:hover { border-color: #0C2425; }
+    .vd-export-btn { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: .05em; padding: 5px 12px; border: 1px solid rgba(12,36,37,.1); background: transparent; color: #0C2425; cursor: pointer; transition: all .15s; outline: none; }
+    .vd-export-btn:hover { border-color: rgba(12,36,37,.25); }
+    .vd-toggle-wrap { position: fixed; bottom: 20px; right: 20px; z-index: 99; display: flex; gap: 8px; }
+    .vd-toggle { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: .05em; padding: 8px 14px; border: 1px solid rgba(12,36,37,.1); background: #F8F7F0; color: #0C2425; cursor: pointer; box-shadow: 0 2px 8px rgba(12,36,37,.1); transition: all .15s; outline: none; }
+    .vd-toggle:hover { border-color: rgba(12,36,37,.25); }
+    body.dark { background: #0C2425; }
+    body.dark .vd-wrap { color: #F1F1E5; }
+    body.dark .vd-card, body.dark .vd-card-lg { background: #162e2f; box-shadow: 0 1px 4px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.15); }
+    body.dark .vd-label { color: #F1F1E5; }
+    body.dark .vd-number { color: #F8F7F0; }
+    body.dark .vd-sub { color: #B4B2A9; }
+    body.dark .vd-legend { color: #B4B2A9; }
+    body.dark .vd-badge { color: #0C2425; }
+    body.dark .vd-table th { color: #F1F1E5; }
+    body.dark .vd-table td { color: #F1F1E5; }
+    body.dark .vd-table tbody tr:hover { background: rgba(255,255,255,.03); }
+    body.dark .vd-table tbody tr + tr { border-color: rgba(255,255,255,.06); }
+    body.dark .vd-table thead tr { border-color: rgba(255,255,255,.08); }
+    body.dark .vd-info-panel { background: #0C2425; border-color: rgba(255,255,255,.06); }
+    body.dark .vd-info-table { color: #F1F1E5; }
+    body.dark .vd-info-table tr + tr td { border-color: rgba(255,255,255,.06); }
+    body.dark .vd-filter { border-color: rgba(255,255,255,.12); color: #F1F1E5; }
+    body.dark .vd-filter.active { background: #F8F7F0; color: #0C2425; border-color: #F8F7F0; }
+    body.dark .vd-modal { background: #162e2f; }
+    body.dark .vd-modal-close { background: #162e2f; border-color: rgba(255,255,255,.15); color: #F1F1E5; }
+    body.dark .vd-modal-header { border-color: rgba(255,255,255,.06); }
+    body.dark .vd-modal-stat { background: #0C2425; }
+    body.dark .vd-modal-stat-label { color: #F1F1E5; }
+    body.dark .vd-modal-stat-value { color: #F8F7F0; }
+    body.dark .vd-modal-section-title { color: #F1F1E5; }
+    body.dark .vd-modal-row { color: #F1F1E5; }
+    body.dark .vd-modal-row + .vd-modal-row { border-color: rgba(255,255,255,.06); }
+    body.dark .vd-dest-tag { background: #0C2425; color: #F1F1E5; }
+    body.dark .vd-template-body { background: #0C2425; color: #F1F1E5; }
+    body.dark .vd-template-tab { border-color: rgba(255,255,255,.12); color: #F1F1E5; }
+    body.dark .vd-template-tab.active { background: #F8F7F0; color: #0C2425; border-color: #F8F7F0; }
+    body.dark .vd-template-copy { background: #162e2f; color: #F1F1E5; border-color: rgba(255,255,255,.15); }
+    body.dark .vd-cobuyer { background: #0C2425 !important; }
+    body.dark .vd-overlay { background: rgba(0,0,0,.6); }
+    body.dark .vd-pipe-stage-label { color: #F1F1E5; }
+    body.dark .vd-pipe-stage-num { color: #F8F7F0; }
+    body.dark .vd-header-wrap span { color: #F1F1E5 !important; }
+    body.dark .vd-header-wrap h2 { color: #F8F7F0 !important; }
+    body.dark .vd-header-wrap p { color: #B4B2A9 !important; }
+    body.dark .vd-header-wrap .vd-line { background: #F1F1E5 !important; }
+    body.dark .vd-accent { color: #E38E41; }
+    body.dark .vd-delta.down { color: #F09595; }
+    body.dark .vd-toggle { background: #162e2f; color: #F1F1E5; border-color: rgba(255,255,255,.12); box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    body.dark .vd-export-btn { color: #F1F1E5; border-color: rgba(255,255,255,.12); }
+    body.dark .vd-leads-hint { color: #B4B2A9 !important; }
+    body.dark .vd-filter-label { color: #B4B2A9 !important; }
+    body.dark .vd-score.cold { color: #B4B2A9; }
+    body.dark .vd-action-btn.call { background: #0C2425; color: #F1F1E5; border-color: rgba(255,255,255,.15); }
+    body.dark .vd-action-btn.hs { background: #0C2425; color: #F1F1E5; border-color: rgba(255,255,255,.15); }
+    body.dark .vd-legend .vd-dot { opacity: .85; }
+    body.dark .vd-filters span { color: #B4B2A9 !important; }
+    body.dark .vd-modal .vd-modal-row-label { opacity: .5 !important; }
+    body.dark .vd-cobuyer-match { color: #5DCAA5 !important; }
+    body.dark .vd-cobuyer-diff { color: #E38E41 !important; }
+    body.dark .vd-cobuyer-vs { color: #F1F1E5 !important; }
+    body.dark .vd-dot[style*="#0C2425"] { background: #5BA8B5 !important; }
+    body.dark, body.dark div, body.dark span, body.dark td, body.dark th, body.dark p, body.dark a, body.dark h2 { color: #F1F1E5 !important; }
+    body.dark .vd-delta.up { color: #5DCAA5 !important; }
+    body.dark .vd-delta.down { color: #F09595 !important; }
+    body.dark .vd-accent { color: #E38E41 !important; }
+    body.dark .vd-score.hot { color: #5DCAA5 !important; }
+    body.dark .vd-score.warm { color: #E38E41 !important; }
+    body.dark .vd-score.cold { color: #6B9E8A !important; }
+    body.dark .vd-pipe-stage-pct { color: #E38E41 !important; }
+    body.dark .vd-info-btn { color: #E38E41 !important; }
+    body.dark .vd-action-btn.email { color: #F8F7F0 !important; }
+    body.dark .vd-action-btn.wa { color: #fff !important; }
+    body.dark .vd-badge { color: #0C2425 !important; }
+    body.dark .vd-badge[style*="rgba(12,36,37"] { color: #F1F1E5 !important; }
+    body.dark .vd-badge[style*="rgba(227,142,65"] { color: #F1F1E5 !important; }
+    body.dark .vd-cobuyer-match { color: #5DCAA5 !important; }
+    body.dark .vd-cobuyer-diff { color: #E38E41 !important; }
+    body.dark [style*="color:#D85A30"], body.dark [style*="color:#1D9E75"] { color: inherit !important; }
+    body.dark #demandChart { color: #B4B2A9; }
+    body.dark #demandChart div[style*="background:#FCEBEB"] { background: #501313 !important; }
+    body.dark #demandChart div[style*="background:#FAECE7"] { background: #4A1B0C !important; }
+    body.dark #demandChart div[style*="background:#FAEEDA"] { background: #412402 !important; }
+    body.dark #demandChart div[style*="background:#E1F5EE"] { background: #04342C !important; }
+    body.dark #demandChart div[style*="color:#A32D2D"] { color: #F7C1C1 !important; }
+    body.dark #demandChart div[style*="color:#D85A30"] { color: #F5C4B3 !important; }
+    body.dark #demandChart div[style*="color:#E38E41"] { color: #FAC775 !important; }
+    body.dark #demandChart div[style*="color:#0F6E56"] { color: #9FE1CB !important; }
+    body.dark #demandChart div[style*="color:#085041"] { color: #5DCAA5 !important; }
+    .vd-action-btn.hs:hover { border-color: rgba(12,36,37,.25); }
+    .vd-temp { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    .vd-temp.hot { background: #1D9E75; }
+    .vd-temp.warm { background: #E38E41; }
+    .vd-temp.cool { background: #B4B2A9; }
+    .vd-temp.cold { background: rgba(12,36,37,.15); }
+    .vd-template-tabs { display: flex; gap: 0; margin-bottom: 12px; }
+    .vd-template-tab { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: .05em; padding: 6px 14px; border: 1px solid rgba(12,36,37,.1); background: transparent; color: #0C2425; cursor: pointer; transition: all .15s; outline: none; }
+    .vd-template-tab:first-child { border-right: none; }
+    .vd-template-tab:last-child { border-left: none; }
+    .vd-template-tab.active { background: #0C2425; color: #F8F7F0; border-color: #0C2425; }
+    .vd-template-body { background: #F1F1E5; padding: 14px; font-size: 11px; line-height: 1.6; color: #0C2425; opacity: .8; white-space: pre-wrap; position: relative; }
+    .vd-template-copy { position: absolute; top: 8px; right: 8px; font-family: 'Outfit', sans-serif; font-size: 9px; padding: 3px 8px; border: 1px solid rgba(12,36,37,.15); background: #F8F7F0; color: #0C2425; cursor: pointer; opacity: .5; transition: opacity .2s; }
+    .vd-template-copy:hover { opacity: 1; }
+    .vd-cobuyer { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; margin-top: 12px; }
+    .vd-cobuyer-col { padding: 16px; }
+    .vd-cobuyer-vs { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; color: #0C2425; opacity: .2; padding: 0 8px; }
+    .vd-cobuyer-row { font-size: 11px; padding: 5px 0; }
+    .vd-cobuyer-match { color: #1D9E75; }
+    .vd-cobuyer-diff { color: #E38E41; }
+    @media (max-width: 640px) {
+      .vd-cobuyer { grid-template-columns: 1fr; }
+      .vd-cobuyer-vs { padding: 8px 0; }
+      .vd-template-tabs { flex-wrap: wrap; }
+      .vd-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .vd-grid-3 { gap: 6px; }
+      .vd-grid-3 .vd-card { padding: 10px; }
+      .vd-grid-3 .vd-number { font-size: 20px; }
+      .vd-grid-3 .vd-label { font-size: 8px; letter-spacing: .1em; }
+      .vd-grid-3 .vd-sub { font-size: 9px; }
+      .vd-grid-2 { grid-template-columns: 1fr; }
+      .vd-number { font-size: 24px; }
+      .vd-card { padding: 14px; }
+      .vd-card-lg { padding: 16px; }
+      .vd-info-panel { margin: 0 -16px; padding: 12px 16px; }
+      .vd-table { min-width: 620px; }
+      .vd-table th, .vd-table td { padding: 10px 12px; font-size: 11px; }
+      .vd-legend { gap: 6px; font-size: 10px; }
+      .vd-wrap { padding: 1rem 1rem !important; }
+      .vd-modal { max-height: 85vh; }
+      .vd-modal-header { padding: 20px 20px 16px; }
+      .vd-modal-body { padding: 16px 20px 20px; }
+      .vd-modal-actions { flex-wrap: wrap; }
+      .vd-pipeline { flex-wrap: wrap; }
+      #demandChart > div { grid-template-columns: repeat(2, 1fr) !important; }
+      .vd-pipe-stage { flex: 1 1 30%; }
+    }
+  </style>
+</head>
+<body>
+<div class="vd-wrap" style="padding: 2rem 1.5rem; max-width: 720px; margin: 0 auto; font-family: 'Outfit', sans-serif; color: #020202;">
+
+  <div class="vd-header-wrap" style="margin-bottom: 2rem; text-align: center;">
+    <span style="font-size: 10px; font-weight: 500; letter-spacing: 0.4em; color: #0C2425; opacity: 0.5;">VIVLA</span>
+    <div class="vd-line" style="width: 1px; height: 20px; background: #0C2425; margin: 12px auto; opacity: 0.15;"></div>
+    <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #0C2425; margin: 0 0 4px;">Dream Home Quiz</h2>
+    <p style="font-size: 12px; color: #4A4A48; opacity: 0.5; margin: 0;">Last 30 days · Demo data</p>
+  </div>
+
+  <!-- METRICS WITH WEEK-OVER-WEEK -->
+  <div class="vd-grid-4" style="margin-bottom: 1.5rem;">
+    <div class="vd-card"><div class="vd-label">STARTED</div><div class="vd-number">847</div><div class="vd-delta up">+12% vs prev</div></div>
+    <div class="vd-card"><div class="vd-label">COMPLETED</div><div class="vd-number">612</div><div class="vd-accent">72% rate</div><div class="vd-delta up">+8% vs prev</div></div>
+    <div class="vd-card"><div class="vd-label">EMAILS</div><div class="vd-number">438</div><div class="vd-accent">72% of completed</div><div class="vd-delta up">+5% vs prev</div></div>
+    <div class="vd-card"><div class="vd-label">PARTNER INVITES</div><div class="vd-number">89</div><div class="vd-accent">20% of emails</div><div class="vd-delta down">-3% vs prev</div></div>
+  </div>
+
+  <div class="vd-grid-3" style="margin-bottom: 2rem;">
+    <div class="vd-card"><div class="vd-label">AVG. TIME</div><div class="vd-number">74s</div><div class="vd-delta down">+6s vs prev</div></div>
+    <div class="vd-card"><div class="vd-label">TOP DROP-OFF</div><div class="vd-number">Q3</div><div class="vd-sub">A perfect week...</div></div>
+    <div class="vd-card"><div class="vd-label">EN / ES</div><div class="vd-number">61 / 39</div><div class="vd-sub">percent</div></div>
+  </div>
+
+  <!-- CONVERSION PIPELINE -->
+  <div class="vd-card-lg" style="margin-bottom: 1.5rem; border-left: 3px solid #E38E41;">
+    <div class="vd-label" style="letter-spacing: .2em; margin-bottom: 4px;">CONVERSION PIPELINE</div>
+    <div class="vd-pipeline">
+      <div class="vd-pipe-stage"><div class="vd-pipe-stage-label">QUIZ LEAD</div><div class="vd-pipe-stage-num">438</div><div class="vd-pipe-stage-pct" style="visibility:hidden">-</div><div class="vd-pipe-bar" style="background: #0C2425;"></div></div>
+      <div class="vd-pipe-stage"><div class="vd-pipe-stage-label">CONTACTED</div><div class="vd-pipe-stage-num">312</div><div class="vd-pipe-stage-pct">71%</div><div class="vd-pipe-bar" style="background: #1a4a4b;"></div></div>
+      <div class="vd-pipe-stage"><div class="vd-pipe-stage-label">CALL BOOKED</div><div class="vd-pipe-stage-num">187</div><div class="vd-pipe-stage-pct">60%</div><div class="vd-pipe-bar" style="background: #E38E41;"></div></div>
+      <div class="vd-pipe-stage"><div class="vd-pipe-stage-label">VISIT</div><div class="vd-pipe-stage-num">94</div><div class="vd-pipe-stage-pct">50%</div><div class="vd-pipe-bar" style="background: #84C9A0;"></div></div>
+      <div class="vd-pipe-stage"><div class="vd-pipe-stage-label">CLOSED</div><div class="vd-pipe-stage-num">23</div><div class="vd-pipe-stage-pct">24%</div><div class="vd-pipe-bar" style="background: #6B9E8A;"></div></div>
+    </div>
+  </div>
+
+  <!-- PROFILE DISTRIBUTION -->
+  <div class="vd-card-lg" style="margin-bottom: 1.5rem;">
+    <div class="vd-header">
+      <div class="vd-label" style="letter-spacing: .2em;">PROFILE DISTRIBUTION</div>
+      <button class="vd-info-btn" onclick="toggleInfo('info-profile', this)">+ info</button>
+    </div>
+    <div class="vd-info-panel" id="info-profile">
+      <table class="vd-info-table">
+        <tr><td>Gen-X Family</td><td>Family-first buyers building a legacy of shared moments. Need 3-4 beds, kid-friendly destinations.</td></tr>
+        <tr><td>Silver</td><td>Done with the hustle. Want a home that's always ready, no fuss. Low-maintenance, quiet locations.</td></tr>
+        <tr><td>Entrepreneur</td><td>Design-obsessed, curate spaces. Lead with architect story, VIVLA Studio renovations.</td></tr>
+        <tr><td>Global Pro</td><td>Optimise everything. See property as infrastructure. Lead with appreciation data, equity.</td></tr>
+        <tr><td>Traditional Pro</td><td>Trust structure and due diligence. Lead with legal frameworks, build quality, resale liquidity.</td></tr>
+      </table>
+    </div>
+    <div class="vd-legend">
+      <span><span class="vd-dot" style="background:rgba(227,142,65,1)"></span>Gen-X Family 31%</span>
+      <span><span class="vd-dot" style="background:rgba(227,142,65,.78)"></span>Silver 22%</span>
+      <span><span class="vd-dot" style="background:rgba(227,142,65,.58)"></span>Entrepreneur 18%</span>
+      <span><span class="vd-dot" style="background:rgba(227,142,65,.42)"></span>Global Pro 17%</span>
+      <span><span class="vd-dot" style="background:rgba(227,142,65,.26)"></span>Traditional Pro 12%</span>
+    </div>
+    <div style="position: relative; width: 100%; height: 240px;"><canvas id="profileChart"></canvas></div>
+  </div>
+
+  <div class="vd-grid-2" style="margin-bottom: 1.5rem;">
+    <div class="vd-card-lg">
+      <div class="vd-header"><div class="vd-label" style="letter-spacing: .2em;">LOCATION PREFERENCE</div><button class="vd-info-btn" onclick="toggleInfo('info-location', this)">+ info</button></div>
+      <div class="vd-info-panel" id="info-location"><table class="vd-info-table"><tr><td>Beach</td><td>Coastal buyer. Menorca, Mallorca, Costa del Sol, Formentera.</td></tr><tr><td>Mountain</td><td>Mountain/ski. Baqueira, Cantabria.</td></tr><tr><td>Beach+mtn</td><td>Scores equally. Show both.</td></tr><tr><td>City</td><td>Urban. Madrid, design-forward.</td></tr></table></div>
+      <div class="vd-legend"><span><span class="vd-dot" style="background:#0C2425"></span>Beach 42%</span><span><span class="vd-dot" style="background:#E38E41"></span>Mtn 19%</span><span><span class="vd-dot" style="background:#84C9A0"></span>Beach+mtn 24%</span><span><span class="vd-dot" style="background:#B4B2A9"></span>City 15%</span></div>
+      <div style="position: relative; width: 100%; height: 180px;"><canvas id="locationChart"></canvas></div>
+    </div>
+    <div class="vd-card-lg">
+      <div class="vd-header"><div class="vd-label" style="letter-spacing: .2em;">SOCIAL CONTEXT</div><button class="vd-info-btn" onclick="toggleInfo('info-social', this)">+ info</button></div>
+      <div class="vd-info-panel" id="info-social"><table class="vd-info-table"><tr><td>Family</td><td>Multi-gen. 3-4 beds, kid-friendly.</td></tr><tr><td>Couple</td><td>2-bed works. Lower share.</td></tr><tr><td>Friends</td><td>Group. Social spaces, entertaining.</td></tr></table></div>
+      <div class="vd-legend"><span><span class="vd-dot" style="background:#0C2425"></span>Family 44%</span><span><span class="vd-dot" style="background:#E38E41"></span>Couple 33%</span><span><span class="vd-dot" style="background:#84C9A0"></span>Friends 23%</span></div>
+      <div style="position: relative; width: 100%; height: 180px;"><canvas id="socialChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="vd-card-lg" style="margin-bottom: 1.5rem;">
+    <div class="vd-header">
+      <div class="vd-label" style="letter-spacing: .2em;">FUNNEL · QUESTION DROP-OFF</div>
+      <button class="vd-info-btn" onclick="toggleInfo('info-funnel', this)">+ info</button>
+    </div>
+    <div class="vd-info-panel" id="info-funnel">
+      <table class="vd-info-table">
+        <tr><td>Location</td><td>Q1 · Where do you wake up? Beach, mountain, or city scene → determines destination preference.</td></tr>
+        <tr><td>Values</td><td>Q2 · What draws you to a place? Nature, culture, community, or investment fundamentals.</td></tr>
+        <tr><td>Lifestyle</td><td>Q3 · Ideal week — relaxation, remote work, entertaining, or staying active.</td></tr>
+        <tr><td>Social</td><td>Q4 · Who's at the table? Multi-gen family, couple, or large friend groups.</td></tr>
+        <tr><td>Design</td><td>Q5 · Space taste — Mediterranean/rustic, modern/contemporary, or curated/designer.</td></tr>
+        <tr><td>Frequency</td><td>Q6 · How often — every break, a few weeks, flexible, or fractional-aligned.</td></tr>
+        <tr><td>Why own</td><td>Q7 · Motivation to own — legacy, reward, investment, or belonging.</td></tr>
+        <tr><td>Email</td><td>Post-quiz email capture. 72% of completers submit. Key conversion point.</td></tr>
+        <tr><td>Partner</td><td>Co-buyer invitation. 20% of email submitters invite a partner.</td></tr>
+      </table>
+    </div>
+    <div style="position: relative; width: 100%; height: 220px;"><canvas id="funnelChart"></canvas></div>
+  </div>
+
+  <div class="vd-grid-2" style="margin-bottom: 1.5rem;">
+    <div class="vd-card-lg">
+      <div class="vd-header"><div class="vd-label" style="letter-spacing: .2em;">USAGE INTENT (Q6)</div><button class="vd-info-btn" onclick="toggleInfo('info-usage', this)">+ info</button></div>
+      <div class="vd-info-panel" id="info-usage"><table class="vd-info-table"><tr><td>High</td><td>Every break. Larger share (1/4 or 1/6).</td></tr><tr><td>Low</td><td>Few weeks/year. 1/8 share.</td></tr><tr><td>Flex</td><td>Variable. Values booking flexibility.</td></tr><tr><td>Frac</td><td>Smart ownership. Highest intent.</td></tr></table></div>
+      <div class="vd-legend"><span><span class="vd-dot" style="background:#0C2425"></span>High 28%</span><span><span class="vd-dot" style="background:#E38E41"></span>Low 24%</span><span><span class="vd-dot" style="background:#84C9A0"></span>Flex 27%</span><span><span class="vd-dot" style="background:#6B9E8A"></span>Frac 21%</span></div>
+      <div style="position: relative; width: 100%; height: 180px;"><canvas id="usageChart"></canvas></div>
+    </div>
+    <div class="vd-card-lg">
+      <div class="vd-header"><div class="vd-label" style="letter-spacing: .2em;">MOTIVATION (Q2)</div><button class="vd-info-btn" onclick="toggleInfo('info-motivation', this)">+ info</button></div>
+      <div class="vd-info-panel" id="info-motivation"><table class="vd-info-table"><tr><td>Nature</td><td>Landscape priority. Views, outdoor spaces.</td></tr><tr><td>Culture</td><td>Restaurants, energy. Walkable.</td></tr><tr><td>Community</td><td>Belonging. Owner network.</td></tr><tr><td>Fundmtls</td><td>Practical. Appreciation, yield.</td></tr></table></div>
+      <div class="vd-legend"><span><span class="vd-dot" style="background:#0C2425"></span>Nature 32%</span><span><span class="vd-dot" style="background:#E38E41"></span>Culture 22%</span><span><span class="vd-dot" style="background:#84C9A0"></span>Community 27%</span><span><span class="vd-dot" style="background:#6B9E8A"></span>Fundmtls 19%</span></div>
+      <div style="position: relative; width: 100%; height: 180px;"><canvas id="motivationChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="vd-card-lg" style="margin-bottom: 1.5rem;">
+    <div class="vd-label" style="letter-spacing: .2em; margin-bottom: 14px;">DAILY COMPLETIONS</div>
+    <div style="position: relative; width: 100%; height: 180px;"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <!-- DESTINATION DEMAND VS FRACTIONS -->
+  <div class="vd-card-lg" style="margin-bottom: 1.5rem;">
+    <div class="vd-header">
+      <div class="vd-label" style="letter-spacing: .2em;">DESTINATION DEMAND VS FRACTIONS</div>
+      <button class="vd-info-btn" onclick="toggleInfo('info-demand', this)">+ info</button>
+    </div>
+    <div class="vd-info-panel" id="info-demand">
+      <table class="vd-info-table">
+        <tr><td>Tiles</td><td>Each tile = one destination. The ratio (e.g. 25:1) means 25 quiz leads per available fraction. Higher = more pressure on supply.</td></tr>
+        <tr><td>Status</td><td>Healthy (&lt;10:1) · Manageable (10-12:1) · Stretched (13-15:1) · High demand (16-19:1) · Critical gap (20+:1)</td></tr>
+      </table>
+    </div>
+    <div id="demandChart" style="overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
+  </div>
+
+  <!-- SUBMISSIONS WITH FILTERS -->
+  <div class="vd-card-lg" style="overflow: hidden; padding: 0;">
+    <div style="display: flex; align-items: center; padding: 20px 20px 0;">
+      <div style="flex: 1;">
+        <div class="vd-label" style="letter-spacing: .2em;">LEADS</div>
+        <div class="vd-leads-hint" style="font-size: 10px; color: #4A4A48; opacity: .4; margin-top: 2px;">Sorted by lead score · Click row for profile</div>
+      </div>
+      <button class="vd-export-btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div class="vd-filters" id="filters"></div>
+    <div class="vd-table-wrap" style="margin-top: 4px; min-height: 420px;">
+      <table class="vd-table">
+        <thead><tr><th onclick="sortTable('score')">SCORE</th><th onclick="sortTable('daysAgo')">TEMP</th><th onclick="sortTable('email')">EMAIL</th><th onclick="sortTable('profile')">PROFILE</th><th onclick="sortTable('location')">LOCATION</th><th onclick="sortTable('usageShort')">USAGE</th><th onclick="sortTable('status')">STATUS</th></tr></thead>
+        <tbody id="submissions-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="vd-toggle-wrap">
+  <button class="vd-toggle" onclick="toggleDark()">Dark mode</button>
+</div>
+
+<div class="vd-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="vd-modal" id="modal-content"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function calcScore(c) {
+  var s = 0;
+  if (c.status === 'Completed') s += 10;
+  if (c.status.indexOf('Abandoned') === 0) s -= 20;
+  if (c.answers.q6 && c.answers.q6.indexOf('Fractional') === 0) s += 30;
+  if (c.answers.q7 && c.answers.q7.indexOf('Investment') === 0) s += 20;
+  if (c.answers.q6 && c.answers.q6.indexOf('High') === 0) s += 10;
+  if (c.partner) s += 15;
+  if (c.answers.q2 && c.answers.q2.indexOf('Quality') === 0) s += 10;
+  return s;
+}
+
+var contacts = [
+  { email:'m.garcia\u0040gmail.com', profile:'Gen-X Family', profileBg:'#84C9A0', location:'Beach', social:'Family', destinations:['Menorca','Mallorca','Costa del Sol','Cantabria'], usage:'High frequency \u00b7 Every break', motivation:'Nature-first \u00b7 Landscape priority', usageShort:'High freq', status:'Completed', timeSpent:'82s', lang:'ES', partner:'r.garcia\u0040gmail.com', phone:'+34612345678', initials:'MG', name:'Miguel Garcia', linkedin:{title:'CFO',company:'Deloitte Spain',location:'Barcelona'}, pipelineStage:'Visit', answers:{q1:'Coastal \u00b7 Family with kids',q2:'Nature-first \u00b7 Landscape priority',q3:'Entertainer \u00b7 Needs guest space',q4:'Multi-gen family',q5:'Mediterranean/rustic taste',q6:'High frequency \u00b7 Every break',q7:'Legacy/family motivation'} },
+  { email:'j.mueller\u0040outlook.de', profile:'Global Pro', profileBg:'#F5D9BA', location:'Beach+mtn', social:'Couple', destinations:['Ibiza','Mallorca','Baqueira','Madrid'], usage:'Flexible schedule \u00b7 Variable stays', motivation:'Quality & value \u00b7 Investor mindset', usageShort:'Flexible', status:'Completed', timeSpent:'67s', lang:'EN', partner:null, phone:'+49151234567', initials:'JM', name:'Jan Mueller', linkedin:{title:'VP Product',company:'Zalando',location:'Berlin'}, pipelineStage:'Call booked', answers:{q1:'Coastal \u00b7 Couple',q2:'Quality & value \u00b7 Investor mindset',q3:'Remote worker \u00b7 Needs WiFi',q4:'Couple use',q5:'Modern/contemporary taste',q6:'Flexible schedule \u00b7 Variable stays',q7:'Investment motivation'} },
+  { email:'s.lindqvist\u0040mac.com', profile:'Silver', profileBg:'#D4D4CC', location:'Mountain', social:'Couple', destinations:['Menorca','Costa de la Luz','Formentera'], usage:'Low frequency \u00b7 Intentional visits', motivation:'Nature-first \u00b7 Landscape priority', usageShort:'Low freq', status:'Completed', timeSpent:'91s', lang:'EN', partner:'k.lindqvist\u0040mac.com', phone:'+46701234567', initials:'SL', name:'Stefan Lindqvist', linkedin:{title:'Retired Partner',company:'McKinsey & Company',location:'Stockholm'}, pipelineStage:'Contacted', answers:{q1:'Mountain \u00b7 Couple',q2:'Nature-first \u00b7 Landscape priority',q3:'Relaxation priority \u00b7 Low activity',q4:'Couple use',q5:'Mediterranean/rustic taste',q6:'Low frequency \u00b7 Intentional visits',q7:'Reward/lifestyle motivation'} },
+  { email:'p.durand\u0040gmail.com', profile:'Entrepreneur', profileBg:'#84C9A0', location:'City', social:'Friends', destinations:['Ibiza','Mallorca','Madrid'], usage:'Fractional-aligned \u00b7 Efficiency', motivation:'Culture-driven \u00b7 Social', usageShort:'Fractional', status:'Completed', timeSpent:'58s', lang:'EN', partner:null, phone:'+33612345678', initials:'PD', name:'Pierre Durand', linkedin:{title:'Founder & CEO',company:'Maison Studio',location:'Paris'}, pipelineStage:'Closed', answers:{q1:'Urban \u00b7 Independent',q2:'Culture-driven \u00b7 Social',q3:'Active lifestyle \u00b7 Needs activities',q4:'Large friend groups',q5:'Curated/designer taste',q6:'Fractional-aligned \u00b7 Efficiency',q7:'Ownership/belonging motivation'} },
+  { email:'a.rossi\u0040icloud.com', profile:'Traditional Pro', profileBg:'#D4D4CC', location:'Beach', social:'Family', destinations:['Mallorca','Costa del Sol','Costa Blanca'], usage:'Fractional-aligned \u00b7 Efficiency', motivation:'Quality & value \u00b7 Investor mindset', usageShort:'Fractional', status:'Abandoned at Q5', timeSpent:'34s', lang:'ES', partner:null, phone:'+39347123456', initials:'AR', name:'Andrea Rossi', linkedin:{title:'Managing Director',company:'Banca Generali',location:'Milan'}, pipelineStage:'Quiz lead', answers:{q1:'Coastal \u00b7 Couple',q2:'Quality & value \u00b7 Investor mindset',q3:'Relaxation priority \u00b7 Low activity',q4:'Multi-gen family',q5:'\u2014',q6:'\u2014',q7:'\u2014'} },
+  { email:'l.chen\u0040proton.me', profile:'Global Pro', profileBg:'#F5D9BA', location:'Beach+mtn', social:'Couple', destinations:['Ibiza','Mallorca','Baqueira','Madrid'], usage:'Fractional-aligned \u00b7 Efficiency', motivation:'Quality & value \u00b7 Investor mindset', usageShort:'Fractional', status:'Completed', timeSpent:'63s', lang:'EN', partner:'m.chen\u0040proton.me', phone:'+44789012345', initials:'LC', name:'Lily Chen', linkedin:{title:'Partner',company:'Goldman Sachs',location:'London'}, pipelineStage:'Visit', answers:{q1:'Coastal \u00b7 Couple',q2:'Quality & value \u00b7 Investor mindset',q3:'Remote worker \u00b7 Needs WiFi',q4:'Couple use',q5:'Modern/contemporary taste',q6:'Fractional-aligned \u00b7 Efficiency',q7:'Investment motivation'} },
+  { email:'f.martinez\u0040yahoo.es', profile:'Gen-X Family', profileBg:'#84C9A0', location:'Beach', social:'Family', destinations:['Menorca','Mallorca','Costa del Sol','Cantabria'], usage:'High frequency \u00b7 Every break', motivation:'Community-seeking \u00b7 Belonging', usageShort:'High freq', status:'Completed', timeSpent:'76s', lang:'ES', partner:'c.martinez\u0040yahoo.es', phone:'+34687654321', initials:'FM', name:'Felipe Martinez', linkedin:{title:'COO',company:'Inditex',location:'Madrid'}, pipelineStage:'Call booked', answers:{q1:'Coastal \u00b7 Family with kids',q2:'Community-seeking \u00b7 Belonging',q3:'Entertainer \u00b7 Needs guest space',q4:'Multi-gen family',q5:'Mediterranean/rustic taste',q6:'High frequency \u00b7 Every break',q7:'Legacy/family motivation'} },
+  { email:'h.weber\u0040gmx.de', profile:'Silver', profileBg:'#D4D4CC', location:'Mountain', social:'Couple', destinations:['Menorca','Costa de la Luz','Formentera'], usage:'Low frequency \u00b7 Intentional visits', motivation:'Nature-first \u00b7 Landscape priority', usageShort:'Low freq', status:'Abandoned at Q4', timeSpent:'28s', lang:'EN', partner:null, phone:null, initials:'HW', name:'Hans Weber', linkedin:{title:'Former CEO',company:'Siemens Energy',location:'Munich'}, pipelineStage:'Quiz lead', answers:{q1:'Mountain \u00b7 Couple',q2:'Nature-first \u00b7 Landscape priority',q3:'Relaxation priority \u00b7 Low activity',q4:'\u2014',q5:'\u2014',q6:'\u2014',q7:'\u2014'} }
+];
+
+var daysData = [1, 3, 8, 5, 14, 2, 4, 21];
+contacts.forEach(function(c, i) { c.score = calcScore(c); c.daysAgo = daysData[i]; });
+
+function tempClass(d) { return d <= 2 ? 'hot' : d <= 7 ? 'warm' : d <= 14 ? 'cool' : 'cold'; }
+function tempLabel(d) { return d === 1 ? '1d ago' : d + 'd ago'; }
+
+var partnerProfiles = {
+  'r.garcia\u0040gmail.com': { name:'Rosa Garcia', profile:'Gen-X Family', location:'Beach', social:'Family', initials:'RG' },
+  'k.lindqvist\u0040mac.com': { name:'Karin Lindqvist', profile:'Silver', location:'Beach', social:'Couple', initials:'KL' },
+  'm.chen\u0040proton.me': { name:'Mark Chen', profile:'Traditional Pro', location:'Mountain', social:'Couple', initials:'MC' },
+  'c.martinez\u0040yahoo.es': { name:'Carmen Martinez', profile:'Gen-X Family', location:'Beach+mtn', social:'Family', initials:'CM' }
+};
+
+var outreachTemplates = {
+  'Gen-X Family': {
+    warm: 'Hi {first},\n\nYour Dream Home quiz matched you with properties perfect for family getaways. We have stunning homes in {destinations} that families love \u2014 space for the kids, rooms for grandparents, and the kind of place that becomes \"our house.\"\n\nWould you be open to a 15-minute call this week to explore options?\n\nBest,',
+    followup: 'Hi {first},\n\nJust following up on your Dream Home quiz results. Families like yours tend to love {dest1} \u2014 it has the right mix of space, safety, and that \"barefoot mornings\" feeling.\n\nWe currently have a property with {social} capacity that might be exactly what you are looking for. Shall I send you the details?\n\nBest,',
+    reengage: 'Hi {first},\n\nA few weeks ago you explored your Dream Home profile with us. Since then, new properties have become available in {dest1} that match your family lifestyle preferences.\n\nWould you like to take a fresh look?\n\nBest,'
+  },
+  'Silver': {
+    warm: 'Hi {first},\n\nYour quiz results suggest you value quality, tranquillity, and a home that is always ready when you are. Our properties in {destinations} offer exactly that \u2014 low maintenance, beautiful settings, no hassle.\n\nShall we arrange a quick call to discuss?\n\nBest,',
+    followup: 'Hi {first},\n\nFollowing up on your Dream Home results. {dest1} is particularly popular with owners who appreciate the quieter side of life \u2014 morning light, a good terrace, and absolute peace.\n\nWe have a property there that might be perfect. Would you like details?\n\nBest,',
+    reengage: 'Hi {first},\n\nWe have some lovely new properties in {dest1} since you took the Dream Home quiz. Effortless luxury, ready when you are.\n\nWorth a fresh look?\n\nBest,'
+  },
+  'Entrepreneur': {
+    warm: 'Hi {first},\n\nYour Dream Home profile tells us design and curation matter to you. Our VIVLA Studio properties in {destinations} are architect-designed spaces where every detail has been considered.\n\nWould you be open to a call to explore what is available?\n\nBest,',
+    followup: 'Hi {first},\n\nFollowing up on your quiz. We have a stunning property in {dest1} that was featured by our VIVLA Studio team \u2014 the kind of space that tells a story.\n\nShall I send the full portfolio?\n\nBest,',
+    reengage: 'Hi {first},\n\nNew design-forward properties just launched in {dest1}. Thought of you based on your Dream Home profile.\n\nWant a look?\n\nBest,'
+  },
+  'Global Pro': {
+    warm: 'Hi {first},\n\nYour quiz results show you think strategically about lifestyle and asset ownership. Our fractional model in {destinations} offers equity that appreciates, access when you want it, and zero maintenance overhead.\n\nWould a 15-minute call make sense this week?\n\nBest,',
+    followup: 'Hi {first},\n\nJust circling back on your Dream Home results. Our properties in {dest1} have shown 11% average appreciation on resale \u2014 and the booking flexibility matches your work-life rhythm.\n\nShall we walk through the numbers?\n\nBest,',
+    reengage: 'Hi {first},\n\nNew fractions in {dest1} since your Dream Home quiz. Strong fundamentals, smart ownership structure.\n\nWorth revisiting?\n\nBest,'
+  },
+  'Traditional Pro': {
+    warm: 'Hi {first},\n\nYour Dream Home profile suggests you value sound structure, clear legal frameworks, and quality that holds its value. Our co-ownership model in {destinations} is built on exactly those principles.\n\nWould you be open to a call to discuss the details?\n\nBest,',
+    followup: 'Hi {first},\n\nFollowing up on your quiz results. I would be happy to share our legal framework documentation and property valuation data for {dest1}. We know due diligence matters.\n\nShall I send the pack?\n\nBest,',
+    reengage: 'Hi {first},\n\nNew properties available in {dest1} since your Dream Home quiz. Same solid co-ownership structure, proven resale track record.\n\nInterested in the details?\n\nBest,'
+  }
+};
+
+var activeFilters = {};
+var sortKey = 'score';
+var sortDir = -1;
+
+function initFilters() {
+  var profiles = [], locations = [], statuses = [];
+  contacts.forEach(function(c) {
+    if (profiles.indexOf(c.profile) === -1) profiles.push(c.profile);
+    if (locations.indexOf(c.location) === -1) locations.push(c.location);
+    var st = c.status === 'Completed' ? 'Completed' : 'Abandoned';
+    if (statuses.indexOf(st) === -1) statuses.push(st);
+  });
+  var html = '';
+  html += '<span class="vd-filter-label" style="font-size:9px;color:#0C2425;opacity:.3;padding:4px 0">PROFILE</span>';
+  profiles.forEach(function(p) { html += '<button class="vd-filter" data-group="profile" data-val="' + p + '" onclick="toggleFilter(this)">' + p + '</button>'; });
+  html += '<span class="vd-filter-label" style="font-size:9px;color:#0C2425;opacity:.3;padding:4px 8px">|</span>';
+  html += '<span class="vd-filter-label" style="font-size:9px;color:#0C2425;opacity:.3;padding:4px 0">LOCATION</span>';
+  locations.forEach(function(l) { html += '<button class="vd-filter" data-group="location" data-val="' + l + '" onclick="toggleFilter(this)">' + l + '</button>'; });
+  html += '<span class="vd-filter-label" style="font-size:9px;color:#0C2425;opacity:.3;padding:4px 8px">|</span>';
+  html += '<span class="vd-filter-label" style="font-size:9px;color:#0C2425;opacity:.3;padding:4px 0">STATUS</span>';
+  statuses.forEach(function(s) { html += '<button class="vd-filter" data-group="status" data-val="' + s + '" onclick="toggleFilter(this)">' + s + '</button>'; });
+  html += '<span style="font-size:9px;color:#0C2425;opacity:.3;padding:4px 8px">|</span>';
+  html += '<button class="vd-filter" style="color:#E38E41;border-color:transparent;opacity:.6" onclick="clearFilters()">Clear all</button>';
+  document.getElementById('filters').innerHTML = html;
+}
+
+function clearFilters() {
+  activeFilters = {};
+  var btns = document.querySelectorAll('.vd-filter');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+  renderTable();
+}
+
+function toggleFilter(btn) {
+  var g = btn.getAttribute('data-group');
+  var v = btn.getAttribute('data-val');
+  if (activeFilters[g] === v) { delete activeFilters[g]; btn.classList.remove('active'); }
+  else {
+    var btns = document.querySelectorAll('.vd-filter[data-group="' + g + '"]');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    activeFilters[g] = v; btn.classList.add('active');
+  }
+  renderTable();
+}
+
+function getFiltered() {
+  return contacts.filter(function(c) {
+    if (activeFilters.profile && c.profile !== activeFilters.profile) return false;
+    if (activeFilters.location && c.location !== activeFilters.location) return false;
+    if (activeFilters.status) {
+      var st = c.status === 'Completed' ? 'Completed' : 'Abandoned';
+      if (st !== activeFilters.status) return false;
+    }
+    return true;
+  }).sort(function(a, b) {
+    var av = a[sortKey] || '', bv = b[sortKey] || '';
+    if (typeof av === 'number') return (av - bv) * sortDir;
+    return String(av).localeCompare(String(bv)) * sortDir;
+  });
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = key === 'score' ? -1 : 1; }
+  renderTable();
+}
+
+function scoreClass(s) { return s >= 40 ? 'hot' : s >= 20 ? 'warm' : 'cold'; }
+
+function renderTable() {
+  var filtered = getFiltered();
+  var tbody = document.getElementById('submissions-table');
+  tbody.innerHTML = '';
+  filtered.forEach(function(c) {
+    var idx = contacts.indexOf(c);
+    var tr = document.createElement('tr');
+    tr.onclick = function() { openModal(idx); };
+    var statusHtml = c.status === 'Completed' ? '<span style="color:#1D9E75">Completed</span>' : '<span style="color:#D85A30">' + c.status + '</span>';
+    tr.innerHTML = '<td><span class="vd-score ' + scoreClass(c.score) + '">' + c.score + '</span></td><td><span class="vd-temp ' + tempClass(c.daysAgo) + '"></span>' + tempLabel(c.daysAgo) + '</td><td>' + c.email + '</td><td><span class="vd-badge" style="background:' + c.profileBg + '">' + c.profile + '</span></td><td>' + c.location + '</td><td>' + c.usageShort + '</td><td>' + statusHtml + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function openModal(i) {
+  var c = contacts[i];
+  var abandoned = c.status.indexOf('Abandoned') === 0;
+  var html = '<button class="vd-modal-close" onclick="closeModal()">\u00d7</button>';
+  html += '<div class="vd-modal-header">';
+  html += '<div style="display:flex;gap:16px;align-items:flex-start">';
+  html += '<div style="width:52px;height:52px;border-radius:50%;background:#0C2425;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:Outfit,sans-serif;font-size:16px;font-weight:500;color:#F8F7F0;letter-spacing:.05em">' + c.initials + '</span></div>';
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="font-family:Cormorant Garamond,serif;font-size:22px;font-weight:500;color:#0C2425;margin-bottom:2px">' + c.name + '</div>';
+  html += '<div style="font-size:12px;color:#4A4A48;opacity:.6;margin-bottom:4px">' + c.email + '</div>';
+  html += '<div style="font-size:11px;color:#0C2425;opacity:.5">' + c.linkedin.title + ' \u00b7 ' + c.linkedin.company + ' \u00b7 ' + c.linkedin.location + '</div>';
+  html += '</div></div>';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-top:16px">';
+  html += '<span class="vd-badge" style="background:' + c.profileBg + ';font-weight:500">' + c.profile + '</span>';
+  html += '<span class="vd-score ' + scoreClass(c.score) + '" style="font-size:14px">Score: ' + c.score + '</span>';
+  html += '<span style="font-size:11px;opacity:.5"><span class="vd-temp ' + tempClass(c.daysAgo) + '"></span>' + tempLabel(c.daysAgo) + '</span>';
+  if (abandoned) html += '<span style="font-size:10px;padding:3px 8px;background:rgba(227,80,40,.1);color:#D85A30">' + c.status + '</span>';
+  html += '</div>';
+  html += '<div class="vd-modal-actions">';
+  var subj = encodeURIComponent('Your VIVLA Dream Home \u2014 ' + c.profile + ' Profile');
+  var body = encodeURIComponent('Hi ' + c.name.split(' ')[0] + ',\n\nThank you for taking the Dream Home quiz. Based on your answers, we think you\u2019d love our properties in ' + c.destinations.join(', ') + '.\n\nWould you be open to a quick call this week?\n\nBest,\n');
+  html += '<a class="vd-action-btn email" href="mailto:' + c.email + '?subject=' + subj + '&body=' + body + '">Email</a>';
+  if (c.phone) {
+    var waMsg = encodeURIComponent('Hi ' + c.name.split(' ')[0] + '! I\u2019m reaching out from VIVLA about your Dream Home quiz result (' + c.profile + '). Would love to chat about properties in ' + c.destinations[0] + '. Is now a good time?');
+    html += '<a class="vd-action-btn wa" href="https://wa.me/' + c.phone.replace(/[^0-9]/g, '') + '?text=' + waMsg + '" target="_blank">WhatsApp</a>';
+  }
+  if (c.phone) {
+    html += '<a class="vd-action-btn call" href="tel:' + c.phone + '">Call</a>';
+  }
+  html += '<a class="vd-action-btn hs" href="https://app.hubspot.com/contacts/25430028" target="_blank">HubSpot</a>';
+  html += '</div></div>';
+  html += '<div class="vd-modal-body">';
+  html += '<div class="vd-modal-section"><div class="vd-modal-grid">';
+  html += '<div class="vd-modal-stat"><div class="vd-modal-stat-label">LOCATION</div><div class="vd-modal-stat-value">' + c.location + '</div></div>';
+  html += '<div class="vd-modal-stat"><div class="vd-modal-stat-label">SOCIAL</div><div class="vd-modal-stat-value">' + c.social + '</div></div>';
+  html += '<div class="vd-modal-stat"><div class="vd-modal-stat-label">TIME SPENT</div><div class="vd-modal-stat-value">' + c.timeSpent + '</div></div>';
+  html += '<div class="vd-modal-stat"><div class="vd-modal-stat-label">PIPELINE</div><div class="vd-modal-stat-value">' + c.pipelineStage + '</div></div>';
+  html += '</div></div>';
+  // CO-BUYER COMPARISON
+  if (c.partner && partnerProfiles[c.partner]) {
+    var p = partnerProfiles[c.partner];
+    html += '<div class="vd-modal-section"><div class="vd-modal-section-title">CO-BUYER COMPARISON</div>';
+    html += '<div class="vd-cobuyer" style="background:#F1F1E5">';
+    html += '<div class="vd-cobuyer-col">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:50%;background:#0C2425;display:flex;align-items:center;justify-content:center;font-size:10px;color:#F8F7F0;font-weight:500">' + c.initials + '</div><span style="font-size:12px;font-weight:500">' + c.name.split(' ')[0] + '</span></div>';
+    var fields = [{l:'Profile',a:c.profile,b:p.profile},{l:'Location',a:c.location,b:p.location},{l:'Social',a:c.social,b:p.social}];
+    fields.forEach(function(f) { html += '<div class="vd-cobuyer-row"><span style="opacity:.4;font-size:10px">' + f.l + '</span><br><span class="' + (f.a===f.b?'vd-cobuyer-match':'vd-cobuyer-diff') + '">' + f.a + '</span></div>'; });
+    html += '</div><div class="vd-cobuyer-vs">VS</div><div class="vd-cobuyer-col">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:50%;background:#E38E41;display:flex;align-items:center;justify-content:center;font-size:10px;color:#F8F7F0;font-weight:500">' + p.initials + '</div><span style="font-size:12px;font-weight:500">' + p.name.split(' ')[0] + '</span></div>';
+    fields.forEach(function(f) { html += '<div class="vd-cobuyer-row"><span style="opacity:.4;font-size:10px">' + f.l + '</span><br><span class="' + (f.a===f.b?'vd-cobuyer-match':'vd-cobuyer-diff') + '">' + f.b + '</span></div>'; });
+    html += '</div></div>';
+    html += '<div style="margin-top:8px;font-size:10px;color:#4A4A48;opacity:.5"><span class="vd-cobuyer-match" style="opacity:1">Green</span> = aligned <span class="vd-cobuyer-diff" style="opacity:1;margin-left:8px">Orange</span> = different</div>';
+    html += '</div>';
+  }
+  html += '<div class="vd-modal-section"><div class="vd-modal-section-title">RECOMMENDED DESTINATIONS</div><div class="vd-dest-tags">';
+  c.destinations.forEach(function(d) { html += '<span class="vd-dest-tag">' + d + '</span>'; });
+  html += '</div></div>';
+  html += '<div class="vd-modal-section"><div class="vd-modal-section-title">USAGE &amp; MOTIVATION</div>';
+  html += '<div class="vd-modal-row"><span class="vd-modal-row-label">Usage intent</span><span class="vd-modal-row-value">' + c.usage + '</span></div>';
+  html += '<div class="vd-modal-row"><span class="vd-modal-row-label">Motivation</span><span class="vd-modal-row-value">' + c.motivation + '</span></div></div>';
+  // OUTREACH TEMPLATES
+  if (outreachTemplates[c.profile] && !abandoned) {
+    var tpl = outreachTemplates[c.profile];
+    var first = c.name.split(' ')[0];
+    var dests = c.destinations.join(', ');
+    var d1 = c.destinations[0];
+    function fillTpl(t) { return t.replace(/\{first\}/g, first).replace(/\{destinations\}/g, dests).replace(/\{dest1\}/g, d1).replace(/\{social\}/g, c.social.toLowerCase()); }
+    html += '<div class="vd-modal-section" style="border-left:3px solid #E38E41;padding-left:16px"><div class="vd-modal-section-title">OUTREACH TEMPLATES</div>';
+    html += '<div class="vd-template-tabs"><button class="vd-template-tab active" onclick="switchTemplate(this,\'tpl-warm-' + i + '\')">Warm intro</button><button class="vd-template-tab" onclick="switchTemplate(this,\'tpl-followup-' + i + '\')">Follow-up</button><button class="vd-template-tab" onclick="switchTemplate(this,\'tpl-reengage-' + i + '\')">Re-engage</button></div>';
+    html += '<div id="tpl-warm-' + i + '" class="vd-template-body">' + fillTpl(tpl.warm) + '<button class="vd-template-copy" onclick="copyTemplate(this)">Copy</button></div>';
+    html += '<div id="tpl-followup-' + i + '" class="vd-template-body" style="display:none">' + fillTpl(tpl.followup) + '<button class="vd-template-copy" onclick="copyTemplate(this)">Copy</button></div>';
+    html += '<div id="tpl-reengage-' + i + '" class="vd-template-body" style="display:none">' + fillTpl(tpl.reengage) + '<button class="vd-template-copy" onclick="copyTemplate(this)">Copy</button></div>';
+    html += '</div>';
+  }
+  html += '<div class="vd-modal-section"><div class="vd-modal-section-title">QUIZ ANSWERS</div>';
+  var qLabels = ['Q1 \u00b7 Morning','Q2 \u00b7 Motivation','Q3 \u00b7 Week','Q4 \u00b7 Table','Q5 \u00b7 Space','Q6 \u00b7 Usage','Q7 \u00b7 Why'];
+  var qKeys = ['q1','q2','q3','q4','q5','q6','q7'];
+  qKeys.forEach(function(k, j) { html += '<div class="vd-modal-row"><span class="vd-modal-row-label">' + qLabels[j] + '</span><span class="vd-modal-row-value">' + c.answers[k] + '</span></div>'; });
+  html += '</div>';
+  html += '<div class="vd-modal-section"><div class="vd-modal-section-title">PARTNER</div>';
+  html += '<div class="vd-modal-row"><span class="vd-modal-row-label">Partner invited</span><span class="vd-modal-row-value">' + (c.partner || 'No') + '</span></div></div>';
+  html += '</div>';
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); document.body.style.overflow = ''; }
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  isDark = document.body.classList.contains('dark');
+  var btn = document.querySelector('.vd-toggle');
+  btn.textContent = isDark ? 'Light mode' : 'Dark mode';
+  buildCharts();
+  renderDemandChart();
+  var pipeColor = isDark ? '#5BA8B5' : '#0C2425';
+  var pipeBars = document.querySelectorAll('.vd-pipe-bar');
+  if (pipeBars[0]) pipeBars[0].style.background = pipeColor;
+  if (pipeBars[1]) pipeBars[1].style.background = isDark ? '#7ec4cf' : '#1a4a4b';
+}
+
+function exportCSV() {
+  var filtered = getFiltered();
+  var headers = ['Score','Days Ago','Email','Name','Profile','Location','Social','Usage','Motivation','Status','Time Spent','Language','Partner','Pipeline'];
+  var rows = filtered.map(function(c) {
+    return [c.score, c.daysAgo, c.email, c.name, c.profile, c.location, c.social, c.usage, c.motivation, c.status, c.timeSpent, c.lang, c.partner || '', c.pipelineStage].map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+  });
+  var csv = headers.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'vivla-quiz-leads.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function toggleInfo(id, btn) {
+  var panel = document.getElementById(id);
+  var isOpen = panel.classList.contains('open');
+  var allPanels = document.querySelectorAll('.vd-info-panel');
+  var allBtns = document.querySelectorAll('.vd-info-btn');
+  for (var i = 0; i < allPanels.length; i++) allPanels[i].classList.remove('open');
+  for (var i = 0; i < allBtns.length; i++) { allBtns[i].classList.remove('active'); allBtns[i].textContent = '+ info'; }
+  if (!isOpen) { panel.classList.add('open'); btn.classList.add('active'); btn.textContent = '\u2212 info'; } else { btn.blur(); }
+}
+
+function switchTemplate(btn, showId) {
+  var parent = btn.parentElement.parentElement;
+  var tabs = parent.querySelectorAll('.vd-template-tab');
+  var bodies = parent.querySelectorAll('.vd-template-body');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  for (var i = 0; i < bodies.length; i++) bodies[i].style.display = 'none';
+  btn.classList.add('active');
+  document.getElementById(showId).style.display = 'block';
+}
+
+function copyTemplate(btn) {
+  var text = btn.parentElement.textContent.replace('Copy', '').trim();
+  navigator.clipboard.writeText(text).then(function() { btn.textContent = 'Copied'; setTimeout(function() { btn.textContent = 'Copy'; }, 1500); });
+}
+
+function renderDemandChart() {
+  var demand = {Mallorca:178, Menorca:142, Ibiza:118, 'Costa del Sol':96, Madrid:74, 'Costa de la Luz':64, Baqueira:52, Cantabria:48, Formentera:42, 'Costa Blanca':38};
+  var inventory = {Mallorca:12, Menorca:8, Ibiza:10, 'Costa del Sol':6, Madrid:3, 'Costa de la Luz':4, Baqueira:5, Cantabria:3, Formentera:2, 'Costa Blanca':4};
+  var keys = Object.keys(demand).sort(function(a,b) { return (demand[b]/inventory[b]) - (demand[a]/inventory[a]); });
+  var html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">';
+  keys.forEach(function(dest) {
+    var ratio = Math.round(demand[dest] / inventory[dest]);
+    var status, color, bg;
+    if (ratio >= 20) { status = 'Critical gap'; color = '#A32D2D'; bg = '#FCEBEB'; }
+    else if (ratio >= 16) { status = 'High demand'; color = '#D85A30'; bg = '#FAECE7'; }
+    else if (ratio >= 13) { status = 'Stretched'; color = '#E38E41'; bg = '#FAEEDA'; }
+    else if (ratio >= 10) { status = 'Manageable'; color = '#0F6E56'; bg = '#E1F5EE'; }
+    else { status = 'Healthy'; color = '#085041'; bg = '#E1F5EE'; }
+    html += '<div style="padding:12px 8px;border-radius:2px;background:' + bg + ';text-align:center">';
+    html += '<div style="font-size:10px;color:' + color + ';margin-bottom:6px">' + dest + '</div>';
+    html += '<div style="font-size:22px;font-weight:500;color:' + color + ';font-family:Cormorant Garamond,serif">' + ratio + ':1</div>';
+    html += '<div style="font-size:9px;color:' + color + ';opacity:.6;margin-top:4px">' + demand[dest] + ' leads / ' + inventory[dest] + ' fractions</div>';
+    html += '<div style="font-size:9px;font-weight:500;color:' + color + ';margin-top:6px">' + status + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById('demandChart').innerHTML = html;
+}
+
+initFilters();
+renderTable();
+renderDemandChart();
+
+var V={p:'#0C2425',o:'#E38E41',m:'#84C9A0',d:'#6B9E8A',g:'#B4B2A9'};
+var Vd={p:'#5BA8B5',o:'#E38E41',m:'#84C9A0',d:'#6B9E8A',g:'#B4B2A9'};
+var gc='rgba(12,36,37,.05)',tc='rgba(12,36,37,.3)';
+var gcd='rgba(255,255,255,.06)',tcd='rgba(255,255,255,.35)';
+var isDark = false;
+var allCharts = [];
+
+function cv() { return isDark ? Vd : V; }
+function gcv() { return isDark ? gcd : gc; }
+function tcv() { return isDark ? tcd : tc; }
+
+function buildCharts() {
+  allCharts.forEach(function(c) { c.destroy(); });
+  allCharts = [];
+  var v = cv(), g = gcv(), t = tcv();
+  var b={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10,family:'Outfit'},color:t}},y:{grid:{color:g},ticks:{font:{size:10,family:'Outfit'},color:t},border:{display:false}}}};
+  var dn={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'58%'};
+  allCharts.push(new Chart(document.getElementById('profileChart'),{type:'bar',data:{labels:['Gen-X Family','Silver','Entrepreneur','Global Pro','Traditional Pro'],datasets:[{data:[136,96,79,74,53],backgroundColor:['rgba(227,142,65,1)','rgba(227,142,65,.78)','rgba(227,142,65,.58)','rgba(227,142,65,.42)','rgba(227,142,65,.26)'],borderRadius:0,barPercentage:0.7}]},options:Object.assign({},b,{scales:Object.assign({},b.scales,{x:Object.assign({},b.scales.x,{ticks:Object.assign({},b.scales.x.ticks,{autoSkip:false,maxRotation:45})})})})}));
+  allCharts.push(new Chart(document.getElementById('locationChart'),{type:'doughnut',data:{labels:['Beach','Mountain','Beach+mtn','City'],datasets:[{data:[184,83,105,66],backgroundColor:[v.p,v.o,v.m,v.g],borderWidth:0}]},options:dn}));
+  allCharts.push(new Chart(document.getElementById('socialChart'),{type:'doughnut',data:{labels:['Family','Couple','Friends'],datasets:[{data:[193,145,100],backgroundColor:[v.p,v.o,v.m],borderWidth:0}]},options:dn}));
+  allCharts.push(new Chart(document.getElementById('funnelChart'),{type:'bar',data:{labels:['Location','Values','Lifestyle','Social','Design','Frequency','Why own','Email','Partner'],datasets:[{data:[847,802,724,698,681,657,612,438,89],backgroundColor:'rgba(227,142,65,.85)',borderRadius:0,barPercentage:0.65}]},options:Object.assign({},b,{scales:Object.assign({},b.scales,{x:Object.assign({},b.scales.x,{ticks:Object.assign({},b.scales.x.ticks,{autoSkip:false,maxRotation:45})})})})}));
+  allCharts.push(new Chart(document.getElementById('usageChart'),{type:'doughnut',data:{labels:['High','Low','Flex','Frac'],datasets:[{data:[123,105,118,92],backgroundColor:[v.p,v.o,v.m,v.d],borderWidth:0}]},options:dn}));
+  allCharts.push(new Chart(document.getElementById('motivationChart'),{type:'doughnut',data:{labels:['Nature','Culture','Community','Fundamentals'],datasets:[{data:[140,96,118,84],backgroundColor:[v.p,v.o,v.m,v.d],borderWidth:0}]},options:dn}));
+  var days=[];for(var i=0;i<30;i++){var d=new Date();d.setDate(d.getDate()-29+i);days.push(d.toLocaleDateString('en',{month:'short',day:'numeric'}));}
+  allCharts.push(new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:days,datasets:[{data:[8,12,15,11,18,22,14,9,13,17,21,25,19,16,14,20,23,28,18,15,12,19,24,27,21,17,14,22,26,20],borderColor:v.o,backgroundColor:'rgba(227,142,65,0.06)',fill:true,tension:0.35,pointRadius:0,borderWidth:1.5}]},options:Object.assign({},b,{scales:Object.assign({},b.scales,{x:Object.assign({},b.scales.x,{ticks:Object.assign({},b.scales.x.ticks,{autoSkip:true,maxTicksLimit:8})})})})}));
+}
+buildCharts();
+</script>
+</body>
+</html>
